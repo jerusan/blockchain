@@ -10,9 +10,10 @@ fn main() {
     bc.add_block("Send 1 BTC to Alice".to_string());
 
     for block in &bc.blocks {
-        println!("Prev. hash: {:?}", block.prev_block_hash);
-        println!("Data: {:?}", block.data);
-        println!("Hash: {:?}\n", block.hash);
+        let hex_prefix = if !block.prev_block_hash.is_empty() { "0x"} else {""};
+        println!("Previous hash: {}{}", hex_prefix, hex::encode(&block.prev_block_hash));
+        println!("Data: {:?}", String::from_utf8_lossy(&block.data).to_string());
+        println!("Hash: 0x{}", hex::encode(&block.hash));
         println!("Timestamp: {:?}\n", block.timestamp);
     }
 }
