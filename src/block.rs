@@ -1,38 +1,71 @@
 use chrono::Utc;
-use sha2::{Digest, Sha256};
+use std::{cmp::Ordering};
 
+use crate::util::{TARGET_BITS, get_sha256_hash};
+
+#[derive(Debug, Clone)]
 pub struct Block {
     pub timestamp: i64,
-    pub data: Vec<u8>,
-    pub prev_block_hash: Vec<u8>,
-    pub hash: Vec<u8>,
+    pub data: String,
+    pub prev_block_hash: String,
+    pub hash: String,
+    pub nonce: u128,
 }
 
 impl Block {
-    pub fn new_block(data: String, prev_block_hash: Vec<u8>) -> Block {
+    pub fn new(data: String, prev_block_hash: String) -> Block {
         let timestamp = Utc::now().timestamp();
-        let timestamp_bytes = timestamp.to_be_bytes();
-        let data_byes = data.as_bytes();
-        let headers_len = prev_block_hash.len() + data_byes.len() + timestamp_bytes.len();
-        let mut headers = Vec::with_capacity(headers_len);
-        headers.extend_from_slice(&prev_block_hash);
-        headers.extend_from_slice(&data_byes);
-        headers.extend_from_slice(&timestamp_bytes);
-    
-        let hash = Sha256::digest(&headers);
-    
-        Block {
+
+        let input: String = hex::encode(&prev_block_hash) + &data + &timestamp.to_string();
+        let hash_string = get_sha256_hash(input);
+
+        let mut new_block = Block {
             timestamp,
-            data: data.into_bytes(),
+            data: data,
             prev_block_hash,
-            hash: hash.to_vec(),
-        }
+            hash: hash_string,
+            nonce: 1,
+        };
+        Self::run_pow(&mut new_block);
+        return new_block;
     }
 
     pub fn new_genesis_block() -> Block {
         let data = "Genesis Block".to_string();
-        let prev_block_hash = Vec::new();
-        Self::new_block(data, prev_block_hash)
+        let prev_block_hash = "".to_string();
+        Self::new(data, prev_block_hash)
+    }
+
+    fn run_pow(block: &mut Block) {
+        let mut nonce: u128 = 0;
+  
+        println!(
+            "Mining the block containing {:?}",
+            &block.data
+        );
+
+        while nonce < 5000 {
+            let input: String = hex::encode(&block.prev_block_hash)
+                + &block.data
+                + &block.timestamp.to_string()
+                // + &hex::encode(&block.hash)
+                // + &TARGET_BITS.to_string()
+                + &nonce.to_string();
+
+            let hash_string = get_sha256_hash(input);
+           
+            let target_string = format!("{:x}", TARGET_BITS);
+            
+            if (&hash_string).cmp(&target_string) == Ordering::Less {
+                println!("Nonce: {} Found Hash: {:?}", nonce, hash_string);
+
+                block.nonce = nonce;
+                block.hash = hash_string;
+                println!();
+                break;
+            } else {
+                nonce += 1;
+            }
+        }
     }
 }
-
